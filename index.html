@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Drive High-Speed & Large File Downloader (Direct Native Stream)</title>
+  <!-- Tailwind CSS via official CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            tactical: {
+              950: '#06090e',
+              900: '#0b0f17',
+              850: '#101622',
+              800: '#161f30',
+              700: '#222f46',
+              600: '#334460'
+            },
+            neon: {
+              cyan: '#00f0ff',
+              emerald: '#00ff9d',
+              amber: '#ffb700',
+              rose: '#ff2e63'
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Courier New', 'monospace'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-tactical-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-neon-cyan/20 selection:text-neon-cyan antialiased">
+  
+  <!-- Subtle Tactical Grid Overlay -->
+  <div class="fixed inset-0 pointer-events-none grid-pattern opacity-40 z-0"></div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="relative z-10 border-b border-tactical-700/60 bg-tactical-900/80 backdrop-blur-md px-4 lg:px-8 py-3.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3.5">
+      <div class="relative flex items-center justify-center w-10 h-10 rounded-lg bg-tactical-800 border border-neon-cyan/40 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
+        <!-- Technical Icon -->
+        <svg class="w-5 h-5 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-emerald opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-neon-emerald"></span>
+        </span>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-base font-bold tracking-wider uppercase text-white font-mono flex items-center gap-2">
+            G-Drive Stream Engine
+            <span class="text-xs px-2 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan font-normal">v2.5 PRO</span>
+          </h1>
+        </div>
+        <p class="text-xs text-slate-400 font-mono">DIRECT DISK STREAM • 50GB+ LARGE FILE NATIVE BUFFERLESS</p>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <!-- Engine Status Pill -->
+      <div id="engine-status-pill" class="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-tactical-800/90 border border-slate-700 text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="engine-mode-text" class="text-slate-300">File System Access API: Siap</span>
+      </div>
+
+      <!-- Settings / Mode Switcher -->
+      <button id="btn-toggle-settings" class="p-2 rounded-lg bg-tactical-800 hover:bg-tactical-700 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white transition-all text-sm flex items-center gap-1.5" title="Pengaturan Engine & Proxy">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="hidden md:inline font-mono text-xs">Config</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Settings Drawer Modal (Hidden by default) -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-tactical-900 border border-tactical-600 rounded-xl max-w-xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-tactical-700">
+        <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded bg-neon-cyan"></span>
+          Konfigurasi Stream Engine & Proxy
+        </h3>
+        <button id="btn-close-settings" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-sm">
+        <div>
+          <label class="block font-mono text-xs text-slate-300 mb-1">METODE KONEKSI STREAMING</label>
+          <div class="grid grid-cols-2 gap-3 mt-2">
+            <label class="flex items-start p-3 rounded-lg border border-neon-cyan/40 bg-tactical-800/80 cursor-pointer">
+              <input type="radio" name="stream_mode" value="local_proxy" checked class="mt-0.5 text-neon-cyan focus:ring-0">
+              <div class="ml-2.5">
+                <div class="font-semibold text-white text-xs">Local Native Engine (Disarankan)</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Streaming via server.py lokal. Bypass virus scan otomatis, resume & chunk tanpa batas.</div>
+              </div>
+            </label>
+            <label class="flex items-start p-3 rounded-lg border border-slate-700 bg-tactical-800/40 cursor-pointer hover:border-slate-600">
+              <input type="radio" name="stream_mode" value="direct_cors" class="mt-0.5 text-neon-cyan focus:ring-0">
+              <div class="ml-2.5">
+                <div class="font-semibold text-white text-xs">Custom CORS / Worker Proxy</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Gunakan endpoint proxy web eksternal (misal Cloudflare Worker).</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="proxy-url-container" class="hidden">
+          <label class="block font-mono text-xs text-slate-300 mb-1">CUSTOM PROXY URL</label>
+          <input type="text" id="custom-proxy-url" placeholder="https://my-worker.workers.dev/?url=" value="" class="w-full bg-tactical-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-neon-cyan focus:outline-none">
+          <p class="text-[11px] text-slate-500 mt-1">Dibutuhkan bila halaman web dijalankan secara standalone tanpa server.py lokal.</p>
+        </div>
+
+        <div>
+          <label class="block font-mono text-xs text-slate-300 mb-1">CHUNK STREAMING BUFFER SIZE</label>
+          <select id="chunk-size-select" class="w-full bg-tactical-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-neon-cyan focus:outline-none">
+            <option value="65536">64 KB (Rendah latensi & memori terendah)</option>
+            <option value="1048576" selected>1 MB (Optimal untuk throughput tinggi file 10GB - 50GB+)</option>
+            <option value="4194304">4 MB (High-Bandwidth Gigabyte SSD Stream)</option>
+          </select>
+        </div>
+
+        <div class="p-3 rounded-lg bg-tactical-950/80 border border-slate-800 text-xs font-mono space-y-1">
+          <div class="text-neon-cyan font-semibold">Native RAM Safety:</div>
+          <div class="text-slate-400">Stream ditulis langsung ke disk melalui <code class="text-emerald-400">FileSystemWritableFileStream</code>. Tab browser tidak akan pernah kehabisan RAM walau file berukuran 100GB.</div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="btn-save-settings" class="px-4 py-2 rounded-lg bg-neon-cyan hover:bg-neon-cyan/90 text-tactical-950 font-bold text-xs font-mono uppercase tracking-wider transition-colors">
+          Simpan Pengaturan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- Top Grid: System & Disk Storage Pre-check Banner -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Card 1: Internal Disk & Space Pre-check -->
+      <div class="p-4 rounded-xl bg-tactical-900/90 border border-tactical-700/80 shadow-lg relative overflow-hidden group">
+        <div class="flex items-start space-x-3">
+          <div class="p-2.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16m-5 4h.01M9 11h.01M9 15h.01M15 15h.01"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xs font-mono uppercase tracking-wider text-slate-400">Disk Storage Pre-check</h2>
+            <div class="text-sm font-semibold text-white mt-0.5">Penyimpanan Internal Direct-Write</div>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Pastikan partisi disk lokal Anda memiliki ruang kosong <span class="text-neon-cyan font-mono font-medium">minimal sebesar ukuran file</span> yang diunduh.
+            </p>
+          </div>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-tactical-800 flex items-center justify-between text-[11px] font-mono">
+          <span class="text-slate-500">Buffer Memory:</span>
+          <span class="text-neon-emerald">Zero-RAM Accumulation (Direct Stream)</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Partition Format Alert (>4GB FAT32 Limitation) -->
+      <div class="p-4 rounded-xl bg-tactical-900/90 border border-amber-500/30 shadow-lg relative overflow-hidden group">
+        <div class="flex items-start space-x-3">
+          <div class="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xs font-mono uppercase tracking-wider text-amber-400/90">Peringatan Format Partisi Disk</h2>
+            <div class="text-sm font-semibold text-white mt-0.5">Batas 4GB untuk FAT32</div>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              File &gt;4GB memerlukan partisi modern seperti <span class="text-slate-200 font-semibold font-mono">APFS/HFS+</span> (macOS), <span class="text-slate-200 font-semibold font-mono">NTFS</span> (Windows), atau <span class="text-slate-200 font-semibold font-mono">ext4</span>. Jangan unduh ke flashdisk FAT32.
+            </p>
+          </div>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-tactical-800 flex items-center justify-between text-[11px] font-mono">
+          <span class="text-slate-500">Max File Size Support:</span>
+          <span class="text-amber-400 font-bold">50GB - 5TB (NTFS/APFS)</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Virus Scan Bypass System -->
+      <div class="p-4 rounded-xl bg-tactical-900/90 border border-tactical-700/80 shadow-lg relative overflow-hidden group">
+        <div class="flex items-start space-x-3">
+          <div class="p-2.5 rounded-lg bg-neon-emerald/10 border border-neon-emerald/30 text-neon-emerald shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xs font-mono uppercase tracking-wider text-slate-400">Anti-Interruption Logic</h2>
+            <div class="text-sm font-semibold text-white mt-0.5">Virus Scan Bypass (>100MB)</div>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Mengambil token konfirmasi keamanan Google Drive secara otomatis sehingga stream tidak macet di layar konfirmasi.
+            </p>
+          </div>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-tactical-800 flex items-center justify-between text-[11px] font-mono">
+          <span class="text-slate-500">Auto-Bypass Token:</span>
+          <span class="text-neon-emerald flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-neon-emerald"></span> Aktif
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Interactive Section: Input Link & Downloader Trigger -->
+    <section class="p-6 rounded-2xl bg-tactical-900 border border-tactical-700/80 shadow-2xl relative">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-white font-mono flex items-center gap-2">
+            <span class="inline-block w-2 h-4 bg-neon-cyan rounded-sm"></span>
+            INPUT GOOGLE DRIVE TARGET
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Mendukung link share publik (<code class="text-slate-300">/file/d/ID/view</code>), export link, atau File ID murni.
+          </p>
+        </div>
+        <div id="file-id-badge" class="hidden font-mono text-xs px-2.5 py-1 rounded bg-tactical-800 border border-tactical-600 text-neon-cyan flex items-center gap-1.5 self-start md:self-auto">
+          <span class="text-slate-400">ID:</span>
+          <span id="detected-file-id" class="font-bold">...</span>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+            <svg class="w-5 h-5 text-neon-cyan/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            id="input-gdrive-url" 
+            placeholder="Tempel link Google Drive di sini (misal: https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing)" 
+            class="w-full bg-tactical-950 border border-tactical-700 focus:border-neon-cyan rounded-xl pl-11 pr-24 py-3.5 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-neon-cyan transition-all shadow-inner"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <div class="absolute inset-y-0 right-1.5 flex items-center space-x-1.5">
+            <button id="btn-paste-url" type="button" class="px-2.5 py-1.5 rounded-lg bg-tactical-800 hover:bg-tactical-700 text-slate-300 hover:text-white text-xs font-mono border border-slate-700 transition-colors" title="Paste dari clipboard">
+              PASTE
+            </button>
+            <button id="btn-clear-url" type="button" class="p-1.5 rounded-lg hover:bg-tactical-800 text-slate-400 hover:text-white transition-colors" title="Hapus input">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Optional Custom Filename Field -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-mono text-slate-400 mb-1">NAMA FILE PENYIMPANAN (OPSIONAL / AUTO-DETECT)</label>
+            <input 
+              type="text" 
+              id="input-custom-filename" 
+              placeholder="Otomatis diambil dari Google Drive Header (atau tentukan sendiri)" 
+              class="w-full bg-tactical-950/80 border border-tactical-700 focus:border-neon-cyan rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-slate-400 mb-1">MODE PENYIMPANAN TARGET</label>
+            <div id="target-mode-badge" class="w-full px-3 py-2 rounded-lg bg-tactical-950 border border-tactical-700 font-mono text-xs text-slate-300 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-neon-emerald"></span>
+                <span>Native Save Dialog</span>
+              </span>
+              <span class="text-[10px] text-slate-500">showSaveFilePicker</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Action Buttons -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
+          <button 
+            id="btn-start-download" 
+            class="w-full sm:w-auto flex-1 flex items-center justify-center space-x-2.5 px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-tactical-950 font-bold font-mono tracking-wider uppercase text-sm shadow-[0_0_25px_rgba(0,240,255,0.3)] hover:shadow-[0_0_35px_rgba(0,240,255,0.5)] transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <svg class="w-5 h-5 text-tactical-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span>PILIH LOKASI & MULAI UNDUH LANGSUNG</span>
+          </button>
+
+          <!-- Fallback Direct Download Link Trigger -->
+          <button 
+            id="btn-fallback-download" 
+            class="w-full sm:w-auto px-4 py-4 rounded-xl bg-tactical-800 hover:bg-tactical-700 border border-tactical-600 hover:border-slate-500 text-slate-300 hover:text-white font-mono text-xs font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-2"
+            title="Download via standard browser download manager (Anchor/Direct)"
+          >
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            <span>Standard Browser Fallback</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error & Notification Banner -->
+    <div id="status-alert-box" class="hidden p-4 rounded-xl border font-mono text-xs transition-all duration-300">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start space-x-3">
+          <div id="alert-icon-container" class="shrink-0 mt-0.5"></div>
+          <div>
+            <div id="alert-title" class="font-bold text-sm">Status Notifikasi</div>
+            <div id="alert-message" class="text-slate-300 mt-1 leading-relaxed">Pesan status akan tampil di sini.</div>
+            <div id="alert-details" class="mt-2 text-[11px] text-slate-400 hidden p-2 rounded bg-tactical-950/70 border border-tactical-800"></div>
+          </div>
+        </div>
+        <button id="btn-close-alert" class="text-slate-400 hover:text-white shrink-0 p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Download Manager & Telemetry (Active when download runs or paused) -->
+    <section id="download-manager-card" class="hidden p-6 rounded-2xl bg-tactical-900 border border-tactical-700/90 shadow-2xl space-y-6 relative overflow-hidden">
+      <!-- Glow decoration -->
+      <div class="absolute top-0 right-0 w-96 h-96 bg-neon-cyan/5 rounded-full blur-3xl pointer-events-none -mr-32 -mt-32"></div>
+
+      <!-- Header: Active File & Action Controls -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-tactical-800">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span id="stream-status-pill" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-950 border border-neon-cyan/40 text-neon-cyan uppercase">
+              STREAMING TO DISK
+            </span>
+            <span id="stream-target-badge" class="px-2 py-0.5 rounded text-[11px] font-mono bg-tactical-800 text-slate-400">
+              Native FileSystem Stream
+            </span>
+          </div>
+          <h2 id="active-filename" class="text-lg font-bold text-white font-mono truncate max-w-xl" title="Nama file aktif">
+            Menghubungkan ke Google Drive...
+          </h2>
+          <div class="text-xs text-slate-400 font-mono flex items-center gap-3">
+            <span>Target: <span id="active-destination-path" class="text-slate-200">Local Disk Storage</span></span>
+            <span>•</span>
+            <span id="active-content-type" class="text-slate-400">application/octet-stream</span>
+          </div>
+        </div>
+
+        <!-- Telemetry Controls (Pause, Resume, Cancel) -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button 
+            id="btn-pause-stream" 
+            class="px-4 py-2 rounded-lg bg-tactical-800 hover:bg-tactical-700 border border-tactical-600 hover:border-slate-400 text-slate-200 hover:text-white font-mono text-xs font-semibold uppercase flex items-center gap-1.5 transition-all"
+          >
+            <svg class="w-4 h-4 text-neon-amber" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+            <span>Pause</span>
+          </button>
+
+          <button 
+            id="btn-resume-stream" 
+            class="hidden px-4 py-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/40 border border-emerald-500 text-emerald-300 font-mono text-xs font-semibold uppercase flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,157,0.2)]"
+          >
+            <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+            <span>Resume</span>
+          </button>
+
+          <button 
+            id="btn-cancel-stream" 
+            class="px-4 py-2 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/80 hover:border-rose-600 text-rose-300 font-mono text-xs font-semibold uppercase flex items-center gap-1.5 transition-all"
+          >
+            <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <span>Batalkan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Progress Bar Component -->
+      <div class="space-y-2">
+        <div class="flex items-end justify-between font-mono text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-400 uppercase">Progress Unduhan:</span>
+            <span id="telemetry-percentage" class="text-2xl font-bold text-neon-cyan">0.0%</span>
+          </div>
+          <div class="text-right">
+            <span id="telemetry-bytes" class="text-sm font-semibold text-white">0.00 MB / ...</span>
+          </div>
+        </div>
+
+        <!-- Custom Styled Progress Track -->
+        <div class="w-full h-4 bg-tactical-950 rounded-full border border-tactical-700/80 overflow-hidden p-0.5 relative">
+          <div 
+            id="progress-bar-fill" 
+            class="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-200 relative overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+            style="width: 0%;"
+          >
+            <!-- Progress Light Sweep Animation -->
+            <div class="progress-shine"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Telemetry Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
+        <!-- Telemetry 1: Speed -->
+        <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-800">
+          <div class="text-[11px] text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Kecepatan Unduh</span>
+            <span class="w-2 h-2 rounded-full bg-neon-cyan animate-pulse"></span>
+          </div>
+          <div id="telemetry-speed" class="text-xl font-bold text-neon-cyan mt-1">
+            0.00 MB/s
+          </div>
+          <div id="telemetry-peak-speed" class="text-[10px] text-slate-500 mt-0.5">
+            Peak: 0.00 MB/s
+          </div>
+        </div>
+
+        <!-- Telemetry 2: ETA -->
+        <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-800">
+          <div class="text-[11px] text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Estimasi Sisa (ETA)</span>
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div id="telemetry-eta" class="text-xl font-bold text-white mt-1">
+            --:--:--
+          </div>
+          <div class="text-[10px] text-slate-500 mt-0.5">
+            Dihitung dari moving average
+          </div>
+        </div>
+
+        <!-- Telemetry 3: Elapsed Time -->
+        <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-800">
+          <div class="text-[11px] text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Waktu Berjalan</span>
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div id="telemetry-elapsed" class="text-xl font-bold text-slate-200 mt-1">
+            00:00:00
+          </div>
+          <div id="telemetry-chunks-count" class="text-[10px] text-slate-500 mt-0.5">
+            Chunks written: 0
+          </div>
+        </div>
+
+        <!-- Telemetry 4: RAM Buffer Health -->
+        <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-800">
+          <div class="text-[11px] text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Status Memori RAM</span>
+            <span class="w-2 h-2 rounded-full bg-neon-emerald"></span>
+          </div>
+          <div class="text-xl font-bold text-neon-emerald mt-1">
+            &lt; 25 MB
+          </div>
+          <div class="text-[10px] text-emerald-400/80 mt-0.5">
+            Native FileSystem Stream Safe
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Speed Chart (Throughput Visualization) -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between font-mono text-[11px] text-slate-400">
+          <span>THROUGHPUT REAL-TIME (GRAFIK 30 DETIK TERAKHIR)</span>
+          <span id="chart-max-label" class="text-slate-500">Max: 0 MB/s</span>
+        </div>
+        <div class="w-full h-20 bg-tactical-950 rounded-xl border border-tactical-800 p-1 relative overflow-hidden">
+          <canvas id="speed-canvas" class="w-full h-full block"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technical Architecture Guide & Tips Accordion -->
+    <section class="p-5 rounded-2xl bg-tactical-900/60 border border-tactical-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Spesifikasi Teknis & Panduan File Berukuran Sangat Besar (50GB+)
+        </h3>
+        <span class="text-xs font-mono text-slate-500">TECHNICAL SPEC</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-slate-400">
+        <div class="p-3 rounded-lg bg-tactical-950/70 border border-tactical-800">
+          <div class="text-slate-200 font-bold mb-1 flex items-center gap-1.5">
+            <span class="text-neon-cyan">01.</span> Direct Native Streaming
+          </div>
+          <p class="leading-relaxed">
+            Tanpa pemuatan file utuh ke memori (RAM). Potongan stream (chunk) dari Fetch API langsung dialirkan ke <code class="text-slate-300">FileSystemWritableFileStream</code> pada SSD/HDD komputer Anda.
+          </p>
+        </div>
+
+        <div class="p-3 rounded-lg bg-tactical-950/70 border border-tactical-800">
+          <div class="text-slate-200 font-bold mb-1 flex items-center gap-1.5">
+            <span class="text-neon-emerald">02.</span> Virus Scan Bypass Token
+          </div>
+          <p class="leading-relaxed">
+            Google Drive memblokir unduhan langsung file &gt;100MB dengan halaman peringatan virus. Sistem ini secara otomatis memparsing token konfirmasi (<code class="text-slate-300">confirm=t / uuid</code>) untuk melanjutkan proses unduhan.
+          </p>
+        </div>
+
+        <div class="p-3 rounded-lg bg-tactical-950/70 border border-tactical-800">
+          <div class="text-slate-200 font-bold mb-1 flex items-center gap-1.5">
+            <span class="text-amber-400">03.</span> Partisi Disk & Izin Akses
+          </div>
+          <p class="leading-relaxed">
+            Pastikan file berstatus publik (<span class="text-slate-300">"Anyone with the link"</span>). Pastikan partisi target berformat modern (APFS/NTFS/ext4) untuk menampung file di atas batas 4GB FAT32.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-tactical-800/80 bg-tactical-950 px-6 py-4 text-center font-mono text-xs text-slate-500">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
+      <div>
+        Google Drive High-Speed & Large File Downloader Engine
+      </div>
+      <div class="flex items-center space-x-4 text-[11px]">
+        <span>Native File System API</span>
+        <span>•</span>
+        <span>Fetch Streams</span>
+        <span>•</span>
+        <span class="text-neon-cyan">Zero In-Memory Buffer</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Core JavaScript Module -->
+  <script src="app.js"></script>
+</body>
+</html>
+
